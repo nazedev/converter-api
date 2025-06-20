@@ -218,11 +218,11 @@ app.post('/video-to-image', upload.single('file'), async (req, res) => {
 	if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded. Please use form-data with "file" field' });
 	const inputPath = req.file.path;
 	const outputName = req.file.filename.replace(/\.[^.]+$/, '') + '.jpg';
-	const outputPath = path.join(tmpDir, outputNameff
+	const outputPath = path.join(tmpDir, outputName);
 	ffmpeg(inputPath)
 	.screenshots({
 		count: 1,
-		filename: outputNfold
+		filename: outputName
 		folder: tmpDir
 	})
 	.on('end', () => {
