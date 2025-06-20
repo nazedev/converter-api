@@ -222,7 +222,7 @@ app.post('/video-to-image', upload.single('file'), async (req, res) => {
 	ffmpeg(inputPath)
 	.screenshots({
 		count: 1,
-		filename: outputName
+		filename: outputName,
 		folder: tmpDir
 	})
 	.on('end', () => {
