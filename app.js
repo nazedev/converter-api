@@ -442,7 +442,7 @@ app.get('/fake-tweet', async (req, res) => {
 				username, displayName: fullname
 			},
 			verified: true,
-			comment, avatarUrl: profile
+			comment, avatarUrl: profile,
 			backgroundColor: '#15202b'
 		});
 		res.set({
@@ -466,3 +466,4 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
 	console.log('Server ready at http://localhost:' + PORT);
 });
+
