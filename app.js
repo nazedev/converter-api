@@ -13,6 +13,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const mime = require('mime-types');
 const ffmpeg = require('fluent-ffmpeg');
+const { spawn } = require('child_process');
 const { generateFakeStory } = require('generator-fake');
 const QuoteGenerator = require('qc-generator-whatsapp');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
@@ -85,6 +86,52 @@ async function attp(text, font) {
 		})
 		.save((nome + '.webp'));
 	});
+}
+
+function getConfig(mode) {
+  const base = './src';
+  return {
+    nuliskiri: {
+      input: `${base}/buku/sebelumkiri.jpg`,
+      output: `${base}/buku/setelahkiri.jpg`,
+      font: `${base}/Indie-Flower.ttf`,
+      size: '960x1280',
+      point: '23',
+      spacing: '2',
+      offset: '+140+153',
+      maxLine: 31
+    },
+    nuliskanan: {
+      input: `${base}/buku/sebelumkanan.jpg`,
+      output: `${base}/buku/setelahkanan.jpg`,
+      font: `${base}/Indie-Flower.ttf`,
+      size: '960x1280',
+      point: '23',
+      spacing: '2',
+      offset: '+128+129',
+      maxLine: 31
+    },
+    foliokiri: {
+      input: `${base}/folio/sebelumkiri.jpg`,
+      output: `${base}/folio/setelahkiri.jpg`,
+      font: `${base}/Indie-Flower.ttf`,
+      size: '1720x1280',
+      point: '23',
+      spacing: '4',
+      offset: '+48+185',
+      maxLine: 38
+    },
+    foliokanan: {
+      input: `${base}/folio/sebelumkanan.jpg`,
+      output: `${base}/folio/setelahkanan.jpg`,
+      font: `${base}/Indie-Flower.ttf`,
+      size: '1720x1280',
+      point: '23',
+      spacing: '4',
+      offset: '+89+190',
+      maxLine: 38
+    }
+  }[mode];
 }
 
 const maxAge = 3 * 60 * 60 * 1000;
@@ -455,6 +502,49 @@ app.get('/fake-tweet', async (req, res) => {
 	}
 });
 
+app.all('/nulis/:mode', async (req, res) => {
+  const mode = req.params.mode;
+  const text = req.method === 'POST' ? req.body.text : req.query.text;
+  if (!text) return res.status(400).json({ error: 'text wajib diisi' });
+
+  try {
+    const config = getConfig(mode);
+    if (!config) return res.status(400).json({ error: 'mode tidak valid' });
+    const splitText = text.replace(/(\S+\s*){1,9}/g, '$&\n');
+    const fixHeight = splitText.split('\n').slice(0, config.maxLine).join('\n');
+    const conv = spawn('convert', [
+      config.input,
+      '-font', config.font,
+      '-size', config.size,
+      '-pointsize', config.point,
+      '-interline-spacing', config.spacing,
+      '-annotate', config.offset,
+      fixHeight,
+      config.output
+    ]);
+
+    conv.on('error', () => {
+      return res.status(500).json({ error: 'convert error' });
+    });
+
+    conv.on('exit', () => {
+      try {
+        const img = fs.readFileSync(config.output);
+        res.set('Content-Type', 'image/jpg');
+        res.send(img);
+        fs.unlink(config.output, (err) => {
+          if (err) console.error('Gagal hapus file:', err);
+        });
+      } catch (e) {
+        return res.status(500).json({ error: 'gagal membaca file output' });
+      }
+    });
+
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/', (req, res) => {
 	res.json({ success: true, time: new Date().toISOString() });
 });
@@ -466,4 +556,5 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
 	console.log('Server ready at http://localhost:' + PORT);
 });
+
 
